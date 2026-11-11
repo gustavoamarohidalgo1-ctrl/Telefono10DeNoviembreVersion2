@@ -1,21 +1,39 @@
-# Verificación · 0.2.1
+# Verificación · 0.3.0
 
-Validación realizada el 10 de noviembre de 2026. Aplicación `pe.gustavo.telefonolite`, versión de paquete 3.
+Validación realizada el 10 de noviembre de 2026. Aplicación `pe.gustavo.telefonolite`, versión de paquete 4.
 
 ## Compilación y entrega
 
 | Comprobación | Resultado |
 | --- | --- |
 | Release con R8 y reducción de recursos | Correcto |
-| Lint release | 0 errores, 9 advertencias |
+| Lint release | 0 errores, 10 advertencias |
 | Firma del APK | Verificada |
-| APK publicado | 61 764 bytes — 61,8 KB decimales |
+| APK publicado | 70 004 bytes — 70,0 KB decimales |
 | Dependencias de producción externas | Ninguna |
 | Permiso de Internet | No solicitado |
 
 Las advertencias de Lint corresponden a textos sin localización, un constructor de vista programática y comprobaciones/configuración de versiones. El tamaño del APK no representa el espacio instalado ni la memoria RAM utilizada.
 
-La [versión publicada](https://github.com/gustavoamarohidalgo1-ctrl/Telefono10DeNoviembre/releases/tag/v0.2.1) incluye el APK firmado y un archivo SHA-256 para comprobar su integridad. La clave de firma permanece privada.
+La [versión publicada](https://github.com/gustavoamarohidalgo1-ctrl/Telefono10DeNoviembreVersion2/releases/tag/v0.3.0) incluye el APK firmado y un archivo SHA-256 para comprobar su integridad. La clave de firma permanece privada.
+
+## Pruebas de 0.3.0
+
+Ocho pruebas instrumentadas aisladas de `VoicemailInboxTest` pasaron en Android 16/API 36: contador nuevo y limpiado, contador desconocido, aislamiento entre cuentas, validación de eventos y rol, permiso revocado, habilitación del receptor y almacenamiento limitado a ocho cuentas.
+
+Las siete comprobaciones de interfaz del [informe del buzón](tests/voicemail-v0.3.0.json) pasaron sobre el APK firmado:
+
+- Indicador de dos mensajes pendientes recibido mediante un evento protegido sintético.
+- Apertura del diálogo sin iniciar una llamada.
+- Actualización del diálogo cuando llega un aviso con contador cero.
+- Persistencia del estado limpiado al reiniciar el proceso.
+- Cierre del diálogo ante una llamada entrante con No molestar activo, dejando Responder y Rechazar visibles.
+- Respuesta de esa llamada sintética y acceso a Colgar.
+- Teclado de marcación y botón Llamar visibles.
+
+Se restauraron los ajustes del emulador y este quedó sin llamadas activas. Las capturas publicadas corresponden al emulador y contienen exclusivamente datos sintéticos.
+
+El evento se inyectó con un fixture privilegiado en un emulador. La prueba mediante PDU MWI no logró entregar el mensaje al framework, aunque la consola lo aceptó. Por ello **no está validada la cadena completa desde el operador hasta la app**. El siguiente aviso real del operador en el Redmi sigue pendiente de comprobación. Véanse los límites y el procedimiento en [Buzón de voz](BUZON.md).
 
 ## Pruebas de 0.2.1
 
@@ -39,7 +57,7 @@ La versión 0.2.1 conserva estos componentes y añade la tarjeta explícita de r
 
 ## Comprobación en un teléfono
 
-0.2.1 se instaló y abrió en un Redmi Note 14 4G con Android 16. Se comprobó la coincidencia del APK instalado y que se conservaran los roles de teléfono/bloqueador y los ajustes de silencio y No molestar. No se efectuó una nueva llamada de red automatizada en esta versión. La prueba manual de audio en ambos sentidos y altavoz se realizó en 0.1.0.
+0.3.0 se instaló y abrió en un Redmi Note 14 4G con Android 16. Se comprobó la apertura del buzón de la SIM, el permiso de estado del teléfono y el receptor habilitado. No había un aviso real del buzón activo en ese momento. Se comprobó la coincidencia del APK instalado y que se conservaran los roles de teléfono/bloqueador y los ajustes de silencio y No molestar. No se efectuó una nueva llamada de red automatizada en esta versión. La prueba manual de audio en ambos sentidos y altavoz se realizó en 0.1.0.
 
 No molestar puede ocultar los avisos flotantes o la pantalla completa incluso con las notificaciones habilitadas. La app respeta esa política; la tarjeta dentro de la pantalla principal permite responder cuando esta se encuentra abierta. No se han probado llamadas reales de emergencia, todas las rutas Bluetooth ni todos los escenarios de múltiples SIM y conferencia.
 

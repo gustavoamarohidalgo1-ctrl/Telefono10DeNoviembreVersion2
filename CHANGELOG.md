@@ -1,5 +1,12 @@
 # Cambios
 
+## 0.3.0 · 10 de noviembre de 2026
+
+- Aviso del buzón del operador integrado en la aplicación, con contador cuando el sistema lo proporciona y estado mínimo por cuenta.
+- Acceso al número de buzón de la SIM mediante una acción explícita; abrir el buzón no inicia una llamada.
+- Recepción de eventos protegidos de Android con el rol de teléfono predeterminado y el permiso `READ_PHONE_STATE`. No descarga audios, no lee SMS y no modifica desvíos.
+- Integración comprobada con eventos sintéticos en emulador; queda pendiente comprobar el próximo aviso real del operador en el teléfono físico. El indicador depende de los avisos recibidos y no se garantiza su retirada en todos los dispositivos.
+
 ## 0.2.1 · 10 de noviembre de 2026
 
 - Tarjeta de llamada entrante con identidad y acciones Responder/Rechazar en la pantalla principal.

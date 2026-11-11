@@ -4,17 +4,21 @@
 
 Marcador nativo para Android, sencillo y ligero, para gestionar llamadas celulares entrantes y salientes. Diseñado en blanco, negro y grises, utiliza los servicios de llamadas y la agenda del sistema.
 
-![Android 9 o superior](https://img.shields.io/badge/Android-9%2B-333333) ![Java 17](https://img.shields.io/badge/Java-17-333333) ![APK 61,8 KB](https://img.shields.io/badge/APK-61%2C8%20KB-333333) ![Versión 0.2.1](https://img.shields.io/badge/versi%C3%B3n-0.2.1-333333)
+![Android 9 o superior](https://img.shields.io/badge/Android-9%2B-333333) ![Java 17](https://img.shields.io/badge/Java-17-333333) ![APK 70.004 bytes](https://img.shields.io/badge/APK-70.004%20bytes-333333) ![Versión 0.3.0](https://img.shields.io/badge/versi%C3%B3n-0.3.0-333333)
 
-[**Descargar APK 0.2.1**](https://github.com/gustavoamarohidalgo1-ctrl/Telefono10DeNoviembre/releases/download/v0.2.1/TelefonoLite-0.2.1.apk) · [Ver la versión](https://github.com/gustavoamarohidalgo1-ctrl/Telefono10DeNoviembre/releases/tag/v0.2.1)
+[**Descargar APK 0.3.0**](https://github.com/gustavoamarohidalgo1-ctrl/Telefono10DeNoviembreVersion2/releases/download/v0.3.0/TelefonoLite-0.3.0.apk) · [Ver la versión](https://github.com/gustavoamarohidalgo1-ctrl/Telefono10DeNoviembreVersion2/releases/tag/v0.3.0)
 
 ## Pantallas
 
 Capturas de emulador con números sintéticos.
 
-| Recientes | Teclado | Llamada | Entrante |
-|:---:|:---:|:---:|:---:|
-| ![Historial reciente](docs/images/recientes.png) | ![Teclado de marcación](docs/images/marcador.png) | ![Controles de llamada](docs/images/llamada.png) | ![Tarjeta de llamada entrante](docs/images/entrante.png) |
+| Recientes | Teclado | Buzón de voz |
+|:---:|:---:|:---:|
+| ![Historial reciente](docs/images/recientes.png) | ![Teclado de marcación](docs/images/marcador.png) | ![Buzón del operador](docs/images/buzon.png) |
+
+| Llamada entrante | Controles de llamada |
+|:---:|:---:|
+| <img src="docs/images/entrante.png" width="280" alt="Responder o rechazar una llamada"> | <img src="docs/images/llamada.png" width="280" alt="Controles durante una llamada"> |
 
 ## Funciones
 
@@ -22,9 +26,16 @@ Capturas de emulador con números sintéticos.
 - Hasta 100 llamadas recientes del registro de Android. Tocar una prepara el número en el teclado; la llamada comienza al pulsar **Llamar**.
 - Responder, rechazar y colgar; altavoz, silencio del micrófono, teclado de tonos y espera cuando la red lo permite. **Colgar** permanece visible al abrir el teclado durante una llamada.
 - Tarjeta de llamada entrante con **Responder** y **Rechazar** en la pantalla principal, y acceso para volver a una llamada en curso.
+- Aviso integrado del buzón del operador, con cantidad pendiente cuando está disponible y acceso para llamar al buzón.
 - Identificación mediante los contactos de Android y acceso a [Contactos Lite](https://github.com/gustavoamarohidalgo1-ctrl/Contactos8Noviembre).
 
 Instala el APK, abre la aplicación y selecciónala como teléfono predeterminado. Android puede solicitar permisos para llamadas, notificaciones y pantalla completa; contactos e historial son opcionales. Telecom gestiona la red, las SIM, las llamadas de emergencia y el timbre.
+
+## Buzón de voz
+
+El botón **Buzón de voz** muestra el último aviso recibido del operador para la SIM disponible. Abrirlo no inicia una llamada: para escuchar los mensajes, pulsa **Llamar al buzón**. La integración requiere que Teléfono Lite sea el teléfono predeterminado y tenga el permiso `READ_PHONE_STATE` concedido.
+
+No es un buzón visual: no descarga ni reproduce audios, no lee SMS y no modifica desvíos. El estado refleja el último aviso recibido, no una consulta en directo. La recepción y retirada del indicador dependen de los avisos del sistema y del operador; queda pendiente comprobar el próximo aviso real del operador en el teléfono físico. Más detalles y resultados en [Buzón de voz](docs/BUZON.md).
 
 ## Silencio y bloqueador
 

@@ -1,0 +1,20 @@
+{
+  "version": "0.3.0",
+  "environment": "Android 16 / API 36 emulator",
+  "date": "2026-11-10",
+  "instrumentation_tests_passed": 8,
+  "release_ui_checks": {
+    "pending_indicator": true,
+    "open_does_not_call": true,
+    "live_clear": true,
+    "cleared_persists": true,
+    "incoming_closes_dialog": true,
+    "incoming_answer": true,
+    "dialpad_visible": true
+  },
+  "idle_after": true,
+  "dnd_restored": true,
+  "apk_sha256": "8a4dd84dcae2d2f2c8cf48b87bc686ff60f56ee90520c26fe49ca015b11775c2",
+  "apk_bytes": 70004,
+  "carrier_mwi_end_to_end": "Pending: emulator PDU was not delivered to the framework; next real carrier event has not been observed on the phone."
+}

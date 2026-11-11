@@ -1,7 +1,8 @@
 # Teléfono Lite
 
 - App Android nativa Java sin dependencias de producción. Usar subagentes `gpt-6.1-terra` con contexto propio cuando ayuden.
-- Mantener el alcance: llamadas entrantes/salientes, audio, controles básicos e historial reciente solicitado por el usuario. Leer CallLog en segundo plano, máximo 100 filas, sin copia privada ni escritura. Contacts Provider es la única agenda; no copiarla ni modificar contactos.
+- Mantener el alcance: llamadas entrantes/salientes, audio, controles básicos, historial reciente y avisos del buzón del operador solicitados por el usuario. Leer CallLog en segundo plano, máximo 100 filas, sin copia privada ni escritura. Contacts Provider es la única agenda; no copiarla ni modificar contactos.
+- Buzón: gestionar sólo eventos protegidos del sistema y estado mínimo por cuenta; no descargar audios, leer SMS ni modificar desvíos. Habilitar el receptor únicamente con rol de teléfono y permiso READ_PHONE_STATE. No iniciar una llamada al abrir el buzón; llamar sólo al pulsar la acción explícita.
 - Diseño exclusivamente blanco, negro y grises neutros. Mantener Colgar visible al abrir el teclado durante una llamada.
 - Respetar el bloqueador com.gustavo.silenciollamadas: nunca solicitar ROLE_CALL_SCREENING ni cambiar su configuración o decidir qué llamadas permite. Probar integración con ese APK solo en emulador.
 - No cambiar No molestar, modo de timbre ni volúmenes. Telecom controla el timbre; InCallService anuncia UI=true y RINGING=false.

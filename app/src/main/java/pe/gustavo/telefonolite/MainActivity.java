@@ -2,11 +2,13 @@ package pe.gustavo.telefonolite;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.NotificationManager;
 import android.app.NotificationChannel;
 import android.app.role.RoleManager;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -16,6 +18,7 @@ import android.provider.ContactsContract;
 import android.provider.Settings;
 import android.telecom.TelecomManager;
 import android.telecom.Call;
+import android.telephony.TelephonyManager;
 import android.text.InputType;
 import android.text.InputFilter;
 import android.os.SystemClock;
@@ -37,15 +40,21 @@ public class MainActivity extends Activity {
     private LinearLayout setup;
     private ScrollView setupScroll, dialerScroll;
     private RecentCallsView recentCalls;
-    private Button recentTab, dialerTab;
+    private Button recentTab, dialerTab, voicemail;
+    private AlertDialog voicemailDialog;
+    private VoicemailInbox.Entry displayedVoicemail;
     private boolean showingRecent = true, resumed;
     private static final int REQUEST_HISTORY = 14;
+    private static final int REQUEST_VOICEMAIL = 15;
     private LinearLayout ongoing;
     private boolean callAfterPermission;
     private String pendingNumber;
     private long lastCallAt;
     private static final int REQUEST_CONTACTS = 13;
     private final Runnable callListener = this::refreshOngoing;
+    private final SharedPreferences.OnSharedPreferenceChangeListener voicemailListener = (prefs, key) -> {
+        if (resumed) { refreshVoicemail(); refreshVoicemailDialog(); }
+    };
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -116,6 +125,13 @@ public class MainActivity extends Activity {
         recentTab.setOnClickListener(v -> showTab(true));
         dialerTab.setOnClickListener(v -> showTab(false));
         screen.addView(tabs);
+
+        voicemail = Ui.button(this, "Buzón de voz", false);
+        voicemail.setTextSize(14);
+        Ui.click(voicemail, this::openVoicemail);
+        LinearLayout.LayoutParams voicemailParams = Ui.params(-1, Ui.dp(this, 48));
+        voicemailParams.bottomMargin = Ui.dp(this, 6);
+        screen.addView(voicemail, voicemailParams);
 
         FrameLayout pages = new FrameLayout(this);
         screen.addView(pages, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -259,7 +275,150 @@ public class MainActivity extends Activity {
             pendingNumber = null;
         }
         refreshSetup();
+        VoicemailInbox.syncReceiver(this);
+        refreshVoicemail();
+        if (requestCode == REQUEST_VOICEMAIL && results.length > 0
+                && results[0] == PackageManager.PERMISSION_GRANTED) openVoicemail();
         if (resumed && showingRecent) recentCalls.onResume();
+    }
+
+    private void refreshVoicemail() {
+        long total = 0;
+        boolean unknownPending = false;
+        for (VoicemailInbox.Entry entry : VoicemailInbox.entries(this)) {
+            if (!entry.observed) continue;
+            if (entry.count < 0) unknownPending = true;
+            else total += entry.count;
+        }
+        String label = "Buzón de voz";
+        if (unknownPending) label += " · Mensajes pendientes";
+        else if (total > 0) label += " · " + total + (total == 1 ? " pendiente" : " pendientes");
+        voicemail.setText(label);
+        voicemail.setContentDescription(label + ". Abrir buzón; no inicia una llamada");
+    }
+
+    private void showVoicemailDialog(AlertDialog.Builder builder) {
+        if (voicemailDialog != null) voicemailDialog.dismiss();
+        AlertDialog dialog = builder.create();
+        displayedVoicemail = null;
+        voicemailDialog = dialog;
+        dialog.setOnDismissListener(ignored -> {
+            if (voicemailDialog == dialog) { voicemailDialog = null; displayedVoicemail = null; }
+        });
+        dialog.show();
+    }
+
+    private void refreshVoicemailDialog() {
+        if (voicemailDialog == null || displayedVoicemail == null) return;
+        for (VoicemailInbox.Entry entry : VoicemailInbox.entries(this)) {
+            if (entry.account.equals(displayedVoicemail.account)) {
+                displayedVoicemail = entry;
+                voicemailDialog.setMessage(voicemailMessage(entry));
+                return;
+            }
+        }
+        voicemailDialog.dismiss();
+    }
+
+    private void openVoicemail() {
+        CallService service = CallService.getInstance();
+        if (service != null) for (Call call : service.currentCalls()) {
+            if (CallService.getCallState(call) == Call.STATE_RINGING) { refreshOngoing(); return; }
+        }
+        if (!isDefaultDialer()) { requestDefaultDialer(); return; }
+        if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            if (getPreferences(MODE_PRIVATE).getBoolean("voicemail_requested", false)
+                    && !shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE)) {
+                openAppSettings();
+            } else {
+                showVoicemailDialog(new AlertDialog.Builder(this).setTitle("Buzón de voz")
+                        .setMessage("Permite el acceso al estado del teléfono para mostrar aquí los avisos del buzón de tu SIM.")
+                        .setPositiveButton("Permitir", (dialog, which) -> {
+                            getPreferences(MODE_PRIVATE).edit().putBoolean("voicemail_requested", true).apply();
+                            requestPermissions(new String[]{Manifest.permission.READ_PHONE_STATE}, REQUEST_VOICEMAIL);
+                        }).setNegativeButton("Ahora no", null));
+            }
+            return;
+        }
+        VoicemailInbox.syncReceiver(this);
+        java.util.List<VoicemailInbox.Entry> entries = VoicemailInbox.entries(this);
+        if (entries.isEmpty()) {
+            showVoicemailDialog(new AlertDialog.Builder(this).setTitle("Buzón de voz")
+                    .setMessage("No hay una SIM disponible para consultar el buzón.")
+                    .setPositiveButton("Cerrar", null));
+        } else if (entries.size() == 1) showVoicemailAccount(entries.get(0));
+        else {
+            CharSequence[] labels = new CharSequence[entries.size()];
+            for (int i = 0; i < entries.size(); i++) labels[i] = accountLabel(entries.get(i));
+            showVoicemailDialog(new AlertDialog.Builder(this).setTitle("Buzón de voz · Elige una SIM")
+                    .setItems(labels, (dialog, which) -> showVoicemailAccount(entries.get(which)))
+                    .setNegativeButton("Cerrar", null));
+        }
+    }
+
+    private CharSequence accountLabel(VoicemailInbox.Entry entry) {
+        return entry.label == null || entry.label.length() == 0 ? "SIM" : entry.label;
+    }
+
+    private String voicemailMessage(VoicemailInbox.Entry entry) {
+        String message;
+        if (!entry.observed) message = "Todavía no se ha recibido un aviso de esta SIM.";
+        else if (entry.count < 0) message = "El operador indica que hay mensajes pendientes.";
+        else if (entry.count == 0) message = "El último aviso del operador no indica mensajes pendientes.";
+        else message = "El operador indica " + entry.count
+                    + (entry.count == 1 ? " mensaje pendiente." : " mensajes pendientes.");
+        return message + "\n\nLos mensajes se escuchan llamando al buzón de tu operador.";
+    }
+
+    private void showVoicemailAccount(VoicemailInbox.Entry entry) {
+        showVoicemailDialog(new AlertDialog.Builder(this).setTitle("Buzón de voz · " + accountLabel(entry))
+                .setMessage(voicemailMessage(entry))
+                .setPositiveButton("Llamar al buzón", (dialog, which) -> callVoicemail(entry))
+                .setNeutralButton("Ajustes", (dialog, which) -> openVoicemailSettings(entry))
+                .setNegativeButton("Cerrar", null));
+        displayedVoicemail = entry;
+    }
+
+    private void openVoicemailSettings(VoicemailInbox.Entry entry) {
+        try {
+            startActivity(new Intent(TelephonyManager.ACTION_CONFIGURE_VOICEMAIL)
+                    .putExtra(TelephonyManager.EXTRA_PHONE_ACCOUNT_HANDLE, entry.account));
+        } catch (ActivityNotFoundException | SecurityException e) {
+            toast("Los ajustes del buzón no están disponibles en este teléfono");
+        }
+    }
+
+    private void callVoicemail(VoicemailInbox.Entry entry) {
+        if (!VoicemailInbox.canManage(this)) { openVoicemail(); return; }
+        boolean available = false;
+        for (VoicemailInbox.Entry current : VoicemailInbox.entries(this)) {
+            if (current.account.equals(entry.account)) { available = true; break; }
+        }
+        if (!available) { toast("Esta SIM ya no está disponible"); return; }
+        if (checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            callAfterPermission = false;
+            requestPermissions(new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
+            toast("Permite las llamadas y vuelve a pulsar Llamar al buzón");
+            return;
+        }
+        TelecomManager telecom = getSystemService(TelecomManager.class);
+        try {
+            String value = telecom == null ? null : telecom.getVoiceMailNumber(entry.account);
+            if (value == null || value.trim().isEmpty()) {
+                showVoicemailDialog(new AlertDialog.Builder(this).setTitle("Configurar buzón")
+                        .setMessage("Esta SIM no tiene un número de buzón configurado.")
+                        .setPositiveButton("Abrir ajustes", (dialog, which) -> openVoicemailSettings(entry))
+                        .setNegativeButton("Cerrar", null));
+                return;
+            }
+            if (SystemClock.elapsedRealtime() - lastCallAt < 1000) return;
+            lastCallAt = SystemClock.elapsedRealtime();
+            Bundle extras = new Bundle();
+            extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, entry.account);
+            telecom.placeCall(Uri.fromParts("tel", value, null), extras);
+        } catch (SecurityException | IllegalArgumentException e) {
+            toast("No se pudo abrir el buzón de esta SIM");
+        }
     }
 
     private void openContacts() {
@@ -373,6 +532,7 @@ public class MainActivity extends Activity {
         }
         ongoing.removeAllViews();
         if (ringing != null) {
+            if (voicemailDialog != null) voicemailDialog.dismiss();
             final Call incoming = ringing;
             TextView title = Ui.text(this, "Llamada entrante", 16, Ui.WHITE);
             title.setGravity(Gravity.START); title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -423,6 +583,10 @@ public class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         resumed = true;
+        VoicemailInbox.syncReceiver(this);
+        VoicemailInbox.preferences(this).registerOnSharedPreferenceChangeListener(voicemailListener);
+        refreshVoicemail();
+        refreshVoicemailDialog();
         refreshSetup();
         if (showingRecent) recentCalls.onResume();
         refreshOngoing();
@@ -431,12 +595,14 @@ public class MainActivity extends Activity {
 
     @Override protected void onPause() {
         resumed = false;
+        VoicemailInbox.preferences(this).unregisterOnSharedPreferenceChangeListener(voicemailListener);
         recentCalls.onPause();
         CallService.removeDialerListener(callListener);
         super.onPause();
     }
 
     @Override protected void onDestroy() {
+        if (voicemailDialog != null) voicemailDialog.dismiss();
         recentCalls.destroy();
         super.onDestroy();
     }
